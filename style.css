@@ -10,8 +10,7 @@ body {
   line-height: 1.4;
 }
 
-/* ===== 잠금 화면 스타일 ===== */
-
+/* ===== 잠금 화면 ===== */
 .lock-screen {
   min-height: 100vh;
   background-color: #1e1e1e;
@@ -33,93 +32,52 @@ body {
 }
 
 .lock-title {
-  margin: 0;
-  color: #fff;
-  font-size: 1.1rem;
-  font-weight: 600;
   text-align: center;
+  color: #fff;
 }
 
 .lock-desc {
-  margin: 8px 0 16px;
   text-align: center;
-  color: #cfcfcf;
-  font-size: .8rem;
-  line-height: 1.4;
+  color: #ccc;
+  font-size: .85rem;
+  margin: 10px 0 20px;
 }
 
-.lock-hint {
-  margin: 16px 0 0;
-  font-size: .7rem;
-  text-align: center;
-  color: #888;
-  line-height: 1.4;
-}
-
-.lock-error {
-  margin: 12px 0 0;
-  font-size: .8rem;
-  text-align: center;
-  color: #ff6b6b;
-  font-weight: 600;
-}
-
-/* 잠금 화면 비밀번호 입력 */
 #unlockPassword {
   border: 1px solid #555;
   background: #1b1b1b;
   border-radius: 8px;
   padding: 10px;
-  font-size: .9rem;
   color: #fff;
-}
-
-#unlockPassword:focus {
-  outline: 2px solid #d2b48c;
-  border-color: #d2b48c;
 }
 
 .unlock-btn {
   background-color: #d2b48c;
-  color: #000;
   border: none;
   width: 100%;
   padding: 12px;
   border-radius: 10px;
-  font-size: .9rem;
   font-weight: 600;
   cursor: pointer;
   margin-top: 8px;
 }
 
-.unlock-btn:active {
-  opacity: 0.8;
+.lock-error {
+  color: #ff6b6b;
+  text-align: center;
+  margin-top: 10px;
 }
 
-/* 실제 앱 화면(언락 후 보일 영역) */
-.app-wrapper {
-  background-color: #faf7f2;
-}
-
-/* ===== 기존 앱 스타일 ===== */
-
+/* ===== 실제 앱 ===== */
 header {
-  background-color: #d2b48c; /* 라떼 느낌 */
+  background-color: #d2b48c;
   color: #fff;
   padding: 16px;
   text-align: center;
 }
 
-header h1 {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
 .subtitle {
-  margin: 4px 0 0;
   font-size: .8rem;
-  opacity: 0.9;
 }
 
 main {
@@ -130,7 +88,6 @@ main {
 
 h2 {
   font-size: 1rem;
-  margin: 0 0 12px;
   color: #4a3826;
 }
 
@@ -158,38 +115,21 @@ h2 {
   flex: 1;
 }
 
-label {
-  font-size: .8rem;
-  color: #4a3826;
-  margin-bottom: 4px;
-  font-weight: 500;
-}
-
 input,
 select,
 textarea {
   border: 1px solid #ccb89b;
-  background: #fffdf9;
   border-radius: 8px;
   padding: 10px;
   font-size: .9rem;
-  color: #333;
+  background: #fffdf9;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
-  outline: 2px solid #d2b48c;
-  border-color: #d2b48c;
-}
-
-/* 저장/수정 버튼 가로 배열 */
 .button-row {
   display: flex;
   gap: 8px;
 }
 
-/* 저장하기 버튼 */
 #saveButton {
   background-color: #4a3826;
   color: #fff;
@@ -197,15 +137,9 @@ textarea:focus {
   flex: 1;
   padding: 12px;
   border-radius: 10px;
-  font-size: .9rem;
   font-weight: 600;
-  cursor: pointer;
-}
-#saveButton:active {
-  opacity: 0.8;
 }
 
-/* 수정 완료 버튼 */
 #updateButton {
   background-color: #2f6;
   color: #000;
@@ -213,12 +147,7 @@ textarea:focus {
   flex: 1;
   padding: 12px;
   border-radius: 10px;
-  font-size: .9rem;
   font-weight: 600;
-  cursor: pointer;
-}
-#updateButton:active {
-  opacity: .8;
 }
 
 .list-area {
@@ -231,15 +160,13 @@ textarea:focus {
   background: #fff;
   border-radius: 10px;
   border: 1px solid #eadfce;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
   padding: 12px 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
 .bean-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 6px;
 }
 
 .bean-actions {
@@ -247,62 +174,23 @@ textarea:focus {
   gap: 6px;
 }
 
-.bean-name {
-  font-size: .95rem;
-  font-weight: 600;
-  color: #4a3826;
-}
-
-.roast-pill {
-  display: inline-block;
-  font-size: .7rem;
-  padding: 3px 8px;
-  border-radius: 999px;
-  border: 1px solid #4a3826;
-  color: #4a3826;
-  background: #fffdf9;
-  margin-top: 4px;
-}
-
-.bean-details {
-  font-size: .8rem;
-  color: #444;
-  line-height: 1.5;
-  white-space: pre-line;
-}
-
-.bean-notes-title {
+.edit-btn, .delete-btn {
+  border-radius: 6px;
   font-size: .75rem;
-  font-weight: 600;
-  color: #4a3826;
-  margin-top: 8px;
-  margin-bottom: 2px;
+  padding: 4px 8px;
+  cursor: pointer;
 }
 
 .edit-btn {
   background: #eef9ff;
   color: #064a7a;
   border: 1px solid #064a7a;
-  border-radius: 8px;
-  font-size: .7rem;
-  padding: 4px 8px;
-  cursor: pointer;
-}
-.edit-btn:active {
-  opacity: .7;
 }
 
 .delete-btn {
   background: #fff0f0;
   color: #a33;
   border: 1px solid #a33;
-  border-radius: 8px;
-  font-size: .7rem;
-  padding: 4px 8px;
-  cursor: pointer;
-}
-.delete-btn:active {
-  opacity: 0.7;
 }
 
 footer {
@@ -310,5 +198,4 @@ footer {
   font-size: .7rem;
   color: #786650;
   padding: 24px 0 40px;
-  opacity: 0.7;
 }

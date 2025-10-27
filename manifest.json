@@ -1,11 +1,9 @@
 {
-  "name": "나의 커피 빈 노트",
-  "short_name": "커피노트",
-  "description": "집에서 마신 커피 원두의 산미, 바디, 향을 기록하는 나만의 취향 다이어리.",
-  "lang": "ko",
+  "name": "Terry’s 커피빈 노트 ☕",
+  "short_name": "커피빈 노트",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#d2b48c",
+  "background_color": "#faf7f2",
   "theme_color": "#d2b48c",
   "icons": [
     {

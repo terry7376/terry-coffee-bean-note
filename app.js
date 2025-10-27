@@ -82,12 +82,12 @@ function renderList() {
     beansList.appendChild(card);
   });
 
-  document.querySelectorAll(".delete-btn").forEach(btn => {
-    btn.addEventListener("click", () => deleteBean(Number(btn.dataset.id)));
-  });
-  document.querySelectorAll(".edit-btn").forEach(btn => {
-    btn.addEventListener("click", () => startEdit(Number(btn.dataset.id)));
-  });
+  document.querySelectorAll(".delete-btn").forEach(btn =>
+    btn.addEventListener("click", () => deleteBean(Number(btn.dataset.id)))
+  );
+  document.querySelectorAll(".edit-btn").forEach(btn =>
+    btn.addEventListener("click", () => startEdit(Number(btn.dataset.id)))
+  );
 }
 
 function deleteBean(idNumber) {
