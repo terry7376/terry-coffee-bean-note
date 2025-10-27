@@ -62,13 +62,23 @@ body {
   margin-top: 8px;
 }
 
+.lock-hint {
+  color: #888;
+  text-align: center;
+  font-size: .7rem;
+  margin-top: 12px;
+  line-height: 1.4;
+}
+
 .lock-error {
   color: #ff6b6b;
   text-align: center;
   margin-top: 10px;
+  font-size: .8rem;
+  font-weight: 600;
 }
 
-/* ===== 실제 앱 ===== */
+/* ===== 헤더 & 탭 ===== */
 header {
   background-color: #d2b48c;
   color: #fff;
@@ -78,17 +88,50 @@ header {
 
 .subtitle {
   font-size: .8rem;
+  margin-top: 4px;
+  opacity: 0.9;
 }
 
+.tab-nav {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.tab-btn {
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.4);
+  color: #fff;
+  font-size: .8rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  min-width: 90px;
+}
+
+.tab-active {
+  background: #fff;
+  color: #4a3826;
+  border: 1px solid #fff;
+  font-weight: 600;
+}
+
+/* ===== 레이아웃 ===== */
 main {
   padding: 16px;
   max-width: 480px;
   margin: 0 auto;
 }
 
+.page-section {
+  /* JS에서 display block/none 제어 */
+}
+
 h2 {
   font-size: 1rem;
   color: #4a3826;
+  margin: 0 0 12px;
 }
 
 .card {
@@ -100,6 +143,7 @@ h2 {
   border: 1px solid #eadfce;
 }
 
+/* ===== 폼 요소 ===== */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -109,10 +153,18 @@ h2 {
 .form-row {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .form-group.small {
   flex: 1;
+}
+
+label {
+  font-size: .8rem;
+  color: #4a3826;
+  margin-bottom: 4px;
+  font-weight: 500;
 }
 
 input,
@@ -123,39 +175,109 @@ textarea {
   padding: 10px;
   font-size: .9rem;
   background: #fffdf9;
+  color: #333;
 }
 
+textarea {
+  resize: vertical;
+}
+
+/* 이미지 힌트 */
+.hint-text {
+  font-size: .7rem;
+  color: #888;
+  margin: 6px 0 8px;
+  line-height: 1.4;
+}
+
+/* 이미지 미리보기 */
+.preview-wrapper {
+  width: 100%;
+  max-width: 160px;
+  aspect-ratio: 1 / 1;
+  border: 1px solid #ccb89b;
+  background: #fffdf9;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* 버튼들 */
 .button-row {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+#saveButton,
+#updateButton,
+#applyFilterButton,
+#clearFilterButton,
+#exportButton,
+#importButton,
+#emailBackupButton {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: .9rem;
+  border: none;
+  cursor: pointer;
 }
 
 #saveButton {
   background-color: #4a3826;
   color: #fff;
-  border: none;
-  flex: 1;
-  padding: 12px;
-  border-radius: 10px;
-  font-weight: 600;
 }
 
 #updateButton {
   background-color: #2f6;
   color: #000;
-  border: none;
-  flex: 1;
-  padding: 12px;
-  border-radius: 10px;
-  font-weight: 600;
 }
 
+#applyFilterButton {
+  background-color: #4a3826;
+  color: #fff;
+}
+
+#clearFilterButton {
+  background-color: #ccc;
+  color: #000;
+}
+
+#exportButton {
+  background-color: #4a3826;
+  color: #fff;
+}
+
+#importButton {
+  background-color: #ccc;
+  color: #000;
+}
+
+#emailBackupButton {
+  background-color: #eef9ff;
+  color: #064a7a;
+  border: 1px solid #064a7a;
+}
+
+/* 리스트 영역 */
 .list-area {
   display: grid;
   gap: 12px;
   margin-bottom: 80px;
 }
 
+/* 카드 (리스트용) */
 .bean-card {
   background: #fff;
   border-radius: 10px;
@@ -167,30 +289,101 @@ textarea {
 .bean-header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: nowrap;
 }
 
 .bean-actions {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
-.edit-btn, .delete-btn {
+.edit-btn,
+.delete-btn {
   border-radius: 6px;
   font-size: .75rem;
   padding: 4px 8px;
   cursor: pointer;
+  line-height: 1.2;
+  min-width: 44px;
+  text-align: center;
+  border: 1px solid transparent;
 }
 
 .edit-btn {
   background: #eef9ff;
   color: #064a7a;
-  border: 1px solid #064a7a;
+  border-color: #064a7a;
 }
 
 .delete-btn {
   background: #fff0f0;
   color: #a33;
-  border: 1px solid #a33;
+  border-color: #a33;
+}
+
+.bean-name {
+  font-size: .95rem;
+  font-weight: 600;
+  color: #4a3826;
+  line-height: 1.4;
+}
+
+.bean-brand {
+  font-size: .75rem;
+  color: #777;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+.roast-pill {
+  display: inline-block;
+  font-size: .7rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid #4a3826;
+  color: #4a3826;
+  background: #fffdf9;
+  margin-top: 6px;
+  line-height: 1.2;
+}
+
+.bean-image-wrapper {
+  width: 100%;
+  max-width: 160px;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  border: 1px solid #eadfce;
+  overflow: hidden;
+  margin-top: 10px;
+  background: #fffdf9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bean-image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bean-details {
+  font-size: .8rem;
+  color: #444;
+  line-height: 1.5;
+  white-space: pre-line;
+  margin-top: 8px;
+}
+
+.bean-notes-title {
+  font-size: .75rem;
+  font-weight: 600;
+  color: #4a3826;
+  margin-top: 12px;
+  margin-bottom: 2px;
 }
 
 footer {
