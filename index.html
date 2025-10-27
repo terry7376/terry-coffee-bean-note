@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>나의 커피 빈 노트</title>
+
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#d2b48c" />
+</head>
+<body>
+
+  <!-- 🔒 잠금 화면 -->
+  <div id="lockScreen" class="lock-screen">
+    <div class="lock-card">
+      <h1 class="lock-title">접근 권한 확인</h1>
+      <p class="lock-desc">
+        개인 전용 커피 노트입니다.<br/>
+        비밀번호를 입력해야 열람할 수 있습니다.
+      </p>
+
+      <div class="form-group">
+        <label>비밀번호</label>
+        <input id="unlockPassword" type="password" placeholder="비밀번호를 입력하세요" />
+      </div>
+
+      <button id="unlockButton" class="unlock-btn">열기</button>
+
+      <p class="lock-hint">허가받지 않은 사용자는 접근할 수 없습니다.</p>
+      <p class="lock-error" id="lockError" style="display:none;">
+        비밀번호가 틀렸습니다.
+      </p>
+    </div>
+  </div>
+
+  <!-- 🔓 앱 본체 -->
+  <div id="appWrapper" class="app-wrapper" style="display:none;">
+    <header>
+      <h1>나의 커피 빈 노트 ☕</h1>
+      <p class="subtitle">집에서 내려 먹은 원두 기록하기</p>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>새 원두 기록하기</h2>
+
+        <div class="form-group">
+          <label>원두 이름 / 브랜드</label>
+          <input id="beanName" type="text" placeholder="예: 예가체프 G1, 블루보틀 XXX" />
+        </div>
+
+        <div class="form-group">
+          <label>로스팅 정도</label>
+          <select id="roastLevel">
+            <option value="">선택해주세요</option>
+            <option>Light</option>
+            <option>Medium</option>
+            <option>Dark</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group small">
+            <label>산미 (1~5)</label>
+            <input id="acidity" type="number" min="1" max="5" placeholder="3" />
+          </div>
+
+          <div class="form-group small">
+            <label>바디 (무게감, 1~5)</label>
+            <input id="body" type="number" min="1" max="5" placeholder="4" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>향 / 노트</label>
+          <input id="flavorNotes" type="text" placeholder="예: 꽃향, 복숭아, 초콜릿, 너트…" />
+        </div>
+
+        <div class="form-group">
+          <label>내 메모</label>
+          <textarea id="myNotes" rows="3" placeholder="첫 모금은 복숭아 느낌, 끝에 초콜릿 단맛 남음 등"></textarea>
+        </div>
+
+        <div class="button-row">
+          <button id="saveButton">저장하기</button>
+          <button id="updateButton" style="display:none;">수정 완료</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>내가 기록한 원두들</h2>
+        <div id="beansList" class="list-area"></div>
+      </section>
+    </main>
+
+    <footer>
+      <p>내 취향 커피 레코드북 ☺</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./service-worker.js");
+    }
+  </script>
+</body>
+</html>
