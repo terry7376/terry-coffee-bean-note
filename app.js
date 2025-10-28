@@ -1,14 +1,11 @@
 /****************************
- * 공유형 Firebase 버전
- * - 모든 데이터는 Firebase Realtime Database에 저장/수정/삭제
- * - beansData는 DB에서 실시간으로 받아온 최신 스냅샷
- * - localStorage는 더 이상 "진짜 저장소"가 아님 (백업 용으로만 사용)
+ * 공유형 Firebase 버전 (디버그 로그 강화)
  ****************************/
 
 /****************************
  * 🔒 잠금 / 접근 제어
  ****************************/
-const MASTER_PASSWORD = "9494"; // 초기 비밀번호
+const MASTER_PASSWORD = "9494";
 
 const lockScreen = document.getElementById("lockScreen");
 const appWrapper = document.getElementById("appWrapper");
@@ -56,8 +53,7 @@ function showListPage() {
   tabListBtn.classList.add("tab-active");
   tabWriteBtn.classList.remove("tab-active");
 
-  // 리스트 페이지 열릴 때마다 필터 적용
-  applyFilter();
+  applyFilter(); // 최신 beansData 기준 다시 그림
 }
 
 tabWriteBtn.addEventListener("click", showWritePage);
@@ -66,9 +62,9 @@ tabListBtn.addEventListener("click", showListPage);
 /****************************
  * ☕ 커피 노트 데이터 & 폼
  ****************************/
-let beansData = [];        // Firebase에서 실시간으로 받아온 배열
-let editTargetId = null;   // 현재 수정 중인 bean의 id (null이면 새 작성 모드)
-let currentImageData = ""; // 현재 선택/유지 중인 이미지(base64)
+let beansData = [];        // Firebase에서 받아온 최신 상태
+let editTargetId = null;   // 현재 수정 중인 bean id
+let currentImageData = ""; // base64 이미지
 
 const beanNameInput = document.getElementById("beanName");
 const beanBrandInput = document.getElementById("beanBrand");
@@ -103,26 +99,37 @@ const emailBackupButton = document.getElementById("emailBackupButton");
 /****************************
  * Firebase Realtime Database 참조
  ****************************/
-const beansRef = firebase.database().ref("beans");
+let beansRef;
+try {
+  beansRef = firebase.database().ref("beans");
+} catch (e) {
+  console.error("firebase 초기화가 안 된 것 같아요. index.html의 firebaseConfig를 확인하세요.", e);
+}
 
 /****************************
  * 초기화
- * - Firebase에서 beans 데이터를 실시간 구독
- * - 화면은 기본적으로 "기록하기" 탭을 먼저 보여줌
  ****************************/
 init();
 function init() {
-  // Firebase에서 데이터 실시간으로 감시
+  if (!beansRef) {
+    console.error("beansRef 없음 - Firebase 설정 미완성");
+    alert("Firebase 연결이 아직 준비되지 않았어요. index.html의 firebaseConfig 값을 확인해 주세요.");
+    return;
+  }
+
+  // Firebase에서 실시간 구독
   beansRef.on("value", (snapshot) => {
     const dataObj = snapshot.val() || {};
-    // dataObj는 { "someId": {...}, "anotherId": {...} }
     beansData = Object.keys(dataObj).map((key) => dataObj[key]);
 
-    // 로컬 백업용으로도 저장(옵션): 혹시 오프라인 참고
+    // 로컬 백업 용도로만 저장
     localStorage.setItem("myCoffeeBeans_backup", JSON.stringify(beansData));
 
-    // 현재 보이는 페이지가 리스트라면 갱신
+    // 현재 페이지가 리스트면 즉시 갱신
     applyFilter();
+  }, (err) => {
+    console.error("Firebase에서 데이터 읽기 실패:", err);
+    alert("데이터 불러올 수 없음 (DB 권한 또는 URL 문제일 수 있어요).");
   });
 
   resetFormState();
@@ -130,7 +137,7 @@ function init() {
 }
 
 /****************************
- * 이미지 처리 (512x512 정사각 리사이즈)
+ * 이미지 512x512 정사각 리사이즈
  ****************************/
 function resizeImageToSquare(file, size = 512) {
   return new Promise((resolve, reject) => {
@@ -148,15 +155,12 @@ function resizeImageToSquare(file, size = 512) {
         const originalH = img.height;
         const aspect = originalW / originalH;
 
-        // 중앙에서 정사각형 crop
         let sx, sy, sSize;
         if (aspect > 1) {
-          // 가로가 더 긴 경우 → 좌우 잘라서 가운데 정사각형
           sSize = originalH;
           sx = (originalW - originalH) / 2;
           sy = 0;
         } else {
-          // 세로가 더 긴 경우 → 위아래 잘라서 가운데 정사각형
           sSize = originalW;
           sx = 0;
           sy = (originalH - originalW) / 2;
@@ -202,9 +206,14 @@ beanImageInput.addEventListener("change", async () => {
 });
 
 /****************************
- * Firebase에 새 노트 저장
+ * 새 노트 저장 (Firebase .set)
  ****************************/
 saveButton.addEventListener("click", () => {
+  if (!beansRef) {
+    alert("Firebase가 아직 준비되지 않았어요 (beansRef 없음).");
+    return;
+  }
+
   const newId = Date.now().toString();
 
   const newBean = {
@@ -231,15 +240,17 @@ saveButton.addEventListener("click", () => {
     return;
   }
 
-  // Firebase에 저장 (id를 key로 사용)
+  console.log("저장 시도:", newBean);
+
   beansRef.child(newId).set(newBean)
     .then(() => {
+      console.log("저장 성공");
       resetFormState();
       alert("저장 완료! ✅");
     })
     .catch((err) => {
-      console.error(err);
-      alert("저장 중 문제가 발생했어요.");
+      console.error("저장 실패:", err);
+      alert("저장 중 문제가 발생했어요.\n(콘솔 에러 메시지를 확인해 주세요)");
     });
 });
 
@@ -278,14 +289,17 @@ function startEdit(idNumber) {
   saveButton.style.display = "none";
   updateButton.style.display = "block";
 
-  // 수정은 기록하기 탭에서 하므로 자동 전환
   showWritePage();
 }
 
 /****************************
- * 수정 완료 (Firebase 업데이트)
+ * 수정 완료 (.set으로 덮어쓰기)
  ****************************/
 updateButton.addEventListener("click", () => {
+  if (!beansRef) {
+    alert("Firebase가 아직 준비되지 않았어요 (beansRef 없음).");
+    return;
+  }
   if (!editTargetId) {
     alert("지금은 수정 모드가 아니에요.");
     return;
@@ -297,8 +311,8 @@ updateButton.addEventListener("click", () => {
     return;
   }
 
-  // 수정 대상 bean의 id를 문자열 키로 쓸 것
   const key = editTargetId.toString();
+  const oldBean = beansData.find(b => b.id === editTargetId);
 
   const updatedBean = {
     id: editTargetId,
@@ -310,47 +324,49 @@ updateButton.addEventListener("click", () => {
     rating: ratingInput.value,
     flavorNotes: flavorNotesInput.value.trim(),
     myNotes: myNotesInput.value.trim(),
-    imageData: currentImageData // 새 이미지 또는 기존 이미지 유지
-    // timestamp는 원래 기록 시간 유지해야 하므로 기존 것 유지해야 하는데,
-    // 여기서는 DB에서 가져와서 덮어쓰는 전략 필요 -> 먼저 원래 timestamp를 가져와서 넣자
+    imageData: currentImageData,
+    timestamp: oldBean && oldBean.timestamp ? oldBean.timestamp : new Date().toLocaleString()
   };
 
-  // 기존 timestamp 유지하려면 beansData에서 찾아온 후 덮어준다
-  const oldBean = beansData.find(b => b.id === editTargetId);
-  if (oldBean && oldBean.timestamp) {
-    updatedBean.timestamp = oldBean.timestamp;
-  } else {
-    updatedBean.timestamp = new Date().toLocaleString();
-  }
+  console.log("수정 시도:", updatedBean);
 
   beansRef.child(key).set(updatedBean)
     .then(() => {
+      console.log("수정 성공");
       resetFormState();
       alert("수정 완료! ✏️");
     })
     .catch((err) => {
-      console.error(err);
-      alert("수정 중 문제가 발생했어요.");
+      console.error("수정 실패:", err);
+      alert("수정 중 문제가 발생했어요.\n(콘솔 에러 메시지를 확인해 주세요)");
     });
 });
 
 /****************************
- * 삭제 (Firebase에서 제거)
+ * 삭제
  ****************************/
 function deleteBean(idNumber) {
+  if (!beansRef) {
+    alert("Firebase가 아직 준비되지 않았어요 (beansRef 없음).");
+    return;
+  }
+
   const ok = confirm("정말 삭제할까요?");
   if (!ok) return;
 
   const key = idNumber.toString();
+  console.log("삭제 시도 id:", key);
+
   beansRef.child(key).remove()
     .then(() => {
+      console.log("삭제 성공");
       if (editTargetId === idNumber) {
         resetFormState();
       }
     })
     .catch((err) => {
-      console.error(err);
-      alert("삭제 중 문제가 발생했어요.");
+      console.error("삭제 실패:", err);
+      alert("삭제 중 문제가 발생했어요.\n(콘솔 에러 메시지를 확인해 주세요)");
     });
 }
 
@@ -378,13 +394,13 @@ function resetFormState() {
 }
 
 /****************************
- * 리스트 렌더링 (필터된 결과)
+ * 리스트 렌더링
  ****************************/
 function renderFilteredList(list) {
   filteredList.innerHTML = "";
 
+  // 최신 id(=최근 저장)가 위로 오게 정렬
   const reversed = [...list].sort((a, b) => a.id - b.id).reverse();
-  // sort해서 뒤집는 이유: 최신(큰 id)이 위로
 
   reversed.forEach((bean) => {
     const card = document.createElement("div");
@@ -442,7 +458,6 @@ function renderFilteredList(list) {
     filteredList.appendChild(card);
   });
 
-  // 버튼 이벤트 연결
   filteredList.querySelectorAll(".delete-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const idToDelete = Number(btn.getAttribute("data-id"));
@@ -467,20 +482,17 @@ function applyFilter() {
   const bodyQuery = filterBodyInput.value.trim();
 
   const result = beansData.filter((bean) => {
-    // 브랜드 부분검색
     if (brandQuery) {
       const b = (bean.brand || "").toLowerCase();
       if (!b.includes(brandQuery)) return false;
     }
 
-    // 산미 정확 매칭
     if (acidityQuery) {
       if ((bean.acidity || "") !== acidityQuery) return false;
     }
 
-    // 바디 정확 매칭
     if (bodyQuery) {
-      if ( (bean.body || "") !== bodyQuery ) return false;
+      if ((bean.body || "") !== bodyQuery) return false;
     }
 
     return true;
@@ -500,9 +512,6 @@ clearFilterButton.addEventListener("click", () => {
 
 /****************************
  * 백업 / 복원 / 이메일 전송
- * - 백업: beansData를 JSON으로 다운로드
- * - 복원: JSON을 읽어 Firebase에 밀어넣기
- * - 이메일: mailto 링크로 백업 JSON URL 본문에 추가
  ****************************/
 function exportBackup() {
   if (!beansData.length) {
@@ -528,6 +537,11 @@ function exportBackup() {
 }
 
 function importBackup(file) {
+  if (!beansRef) {
+    alert("Firebase가 아직 준비되지 않았어요 (beansRef 없음).");
+    return;
+  }
+
   const reader = new FileReader();
 
   reader.onload = function (e) {
@@ -538,8 +552,8 @@ function importBackup(file) {
       }
 
       const overwrite = confirm("기존 Firebase 데이터를 전부 이 백업으로 덮어쓸까요? (취소하면 병합)");
+
       if (overwrite) {
-        // 전체를 새로 세팅: 현재 모든 beansRef 지우고 업로드
         beansRef.set(null).then(() => {
           const updates = {};
           importedData.forEach(item => {
@@ -554,7 +568,6 @@ function importBackup(file) {
           });
         });
       } else {
-        // 병합: 기존 id와 겹치지 않는 것만 추가
         const existingIds = new Set(beansData.map(b => b.id));
         const updates = {};
         importedData.forEach(item => {
@@ -566,6 +579,7 @@ function importBackup(file) {
             };
           }
         });
+
         if (Object.keys(updates).length === 0) {
           alert("추가할 새로운 항목이 없습니다.");
         } else {
@@ -575,8 +589,8 @@ function importBackup(file) {
         }
       }
     } catch (err) {
-      console.error(err);
-      alert("복원 중 오류가 발생했습니다.");
+      console.error("복원 실패:", err);
+      alert("복원 중 오류가 발생했습니다. 콘솔 에러를 확인해 주세요.");
     }
   };
 
@@ -584,19 +598,12 @@ function importBackup(file) {
 }
 
 exportButton.addEventListener("click", exportBackup);
-
 importButton.addEventListener("click", () => importFileInput.click());
-
 importFileInput.addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (file) importBackup(file);
 });
 
-/**
- * 이메일로 백업 보내기:
- * - mailto로 메일 앱을 열고 백업 데이터의 임시 URL을 본문에 넣는다.
- *   (첨부 자동 전송은 브라우저만으로는 불가)
- */
 function emailBackup() {
   if (!beansData.length) {
     alert("백업할 데이터가 없습니다.");
@@ -623,7 +630,7 @@ function emailBackup() {
 emailBackupButton.addEventListener("click", emailBackup);
 
 /****************************
- * HTML 출력 시 문자 이스케이프 (XSS 방지)
+ * XSS 방지용 이스케이프
  ****************************/
 function escapeHTML(str = "") {
   return String(str)
