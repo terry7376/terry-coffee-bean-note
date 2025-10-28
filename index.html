@@ -40,7 +40,7 @@
     <!-- 상단 헤더 / 탭 네비게이션 -->
     <header>
       <h1>Terry’s 커피빈 노트 ☕</h1>
-      <p class="subtitle">집에서 내려 먹은 원두 기록하기</p>
+      <p class="subtitle">공유 커피 빈 기록 · 실시간 동기화</p>
 
       <nav class="tab-nav">
         <button id="tabWrite" class="tab-btn tab-active">기록하기</button>
@@ -76,6 +76,7 @@
             </select>
           </div>
 
+          <!-- 산미 / 바디 -->
           <div class="form-row">
             <div class="form-group small">
               <label>산미 (1~5)</label>
@@ -85,6 +86,14 @@
             <div class="form-group small">
               <label>바디 (무게감, 1~5)</label>
               <input id="body" type="number" min="1" max="5" placeholder="4" />
+            </div>
+          </div>
+
+          <!-- 평점 -->
+          <div class="form-row">
+            <div class="form-group small">
+              <label>평점 (1~10)</label>
+              <input id="rating" type="number" min="1" max="10" placeholder="예: 8" />
             </div>
           </div>
 
@@ -163,6 +172,7 @@
           <h2>📦 백업 & 복원</h2>
           <p class="hint-text">
             저장된 모든 원두 데이터를 JSON 파일로 내보내거나 복원할 수 있습니다.
+            (지금은 Firebase와 동기화됩니다)
           </p>
 
           <div class="button-row">
@@ -184,6 +194,28 @@
       <p>Terry’s 커피빈 노트 ☕</p>
     </footer>
   </div>
+
+  <!-- Firebase SDK (Compat 버전: 브라우저에서 바로 사용하기 쉬움) -->
+  <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-database-compat.js"></script>
+
+  <script>
+    // 🔥 여기에 너의 Firebase 프로젝트 설정값을 넣어야 해
+    // Firebase 콘솔 > 프로젝트 설정 > 내 앱(웹) > 구성에서 복사한 값
+    const firebaseConfig = {
+      apiKey: "AIzaSyB7dGT3ZdOywZku5S_T_pKyiJuqD_yDSDo",
+      authDomain: "terry-s-coffee-bean-note.firebaseapp.com",
+      projectId: "terry-s-coffee-bean-note",
+      storageBucket: "terry-s-coffee-bean-note.firebasestorage.app",
+      messagingSenderId: "617879496307",
+      appId: "1:617879496307:web:d1fc8ef599f6c19b78ac06",
+      measurementId: "G-LCBLTKFCT8"
+    };
+
+    // Firebase 시작
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+  </script>
 
   <script src="app.js"></script>
   <script>

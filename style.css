@@ -125,7 +125,7 @@ main {
 }
 
 .page-section {
-  /* JS에서 display block/none 제어 */
+  /* JS에서 display block/none 전환 */
 }
 
 h2 {
@@ -291,9 +291,33 @@ textarea {
   justify-content: space-between;
   align-items: flex-start;
   flex-wrap: nowrap;
+  gap: 8px;
 }
 
+/* 오른쪽 영역(평점+수정/삭제) */
 .bean-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  min-width: 70px;
+}
+
+.bean-rating-display {
+  font-size: .75rem;
+  font-weight: 600;
+  color: #4a3826;
+  background: #fffdf2;
+  border: 1px solid #ccb89b;
+  border-radius: 6px;
+  padding: 4px 6px;
+  line-height: 1.2;
+  text-align: right;
+}
+
+.actions-row {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
@@ -303,7 +327,7 @@ textarea {
 .edit-btn,
 .delete-btn {
   border-radius: 6px;
-  font-size: .75rem;
+  font-size: .7rem;
   padding: 4px 8px;
   cursor: pointer;
   line-height: 1.2;

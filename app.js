@@ -1,4 +1,11 @@
 /****************************
+ * 공유형 Firebase 버전
+ * - 모든 데이터는 Firebase Realtime Database에 저장/수정/삭제
+ * - beansData는 DB에서 실시간으로 받아온 최신 스냅샷
+ * - localStorage는 더 이상 "진짜 저장소"가 아님 (백업 용으로만 사용)
+ ****************************/
+
+/****************************
  * 🔒 잠금 / 접근 제어
  ****************************/
 const MASTER_PASSWORD = "9494"; // 초기 비밀번호
@@ -49,7 +56,7 @@ function showListPage() {
   tabListBtn.classList.add("tab-active");
   tabWriteBtn.classList.remove("tab-active");
 
-  // 리스트 페이지 열릴 때마다 최신 데이터로 필터 적용
+  // 리스트 페이지 열릴 때마다 필터 적용
   applyFilter();
 }
 
@@ -59,15 +66,16 @@ tabListBtn.addEventListener("click", showListPage);
 /****************************
  * ☕ 커피 노트 데이터 & 폼
  ****************************/
-let beansData = [];        // 모든 저장된 노트들
-let editTargetId = null;   // 현재 수정 중인 노트 id (없으면 null)
-let currentImageData = ""; // 현재 선택된 이미지 (base64)
+let beansData = [];        // Firebase에서 실시간으로 받아온 배열
+let editTargetId = null;   // 현재 수정 중인 bean의 id (null이면 새 작성 모드)
+let currentImageData = ""; // 현재 선택/유지 중인 이미지(base64)
 
 const beanNameInput = document.getElementById("beanName");
 const beanBrandInput = document.getElementById("beanBrand");
 const roastLevelInput = document.getElementById("roastLevel");
 const acidityInput = document.getElementById("acidity");
 const bodyInput = document.getElementById("body");
+const ratingInput = document.getElementById("rating");
 const flavorNotesInput = document.getElementById("flavorNotes");
 const myNotesInput = document.getElementById("myNotes");
 
@@ -93,15 +101,32 @@ const importFileInput = document.getElementById("importFileInput");
 const emailBackupButton = document.getElementById("emailBackupButton");
 
 /****************************
+ * Firebase Realtime Database 참조
+ ****************************/
+const beansRef = firebase.database().ref("beans");
+
+/****************************
  * 초기화
+ * - Firebase에서 beans 데이터를 실시간 구독
+ * - 화면은 기본적으로 "기록하기" 탭을 먼저 보여줌
  ****************************/
 init();
-
 function init() {
-  const saved = localStorage.getItem("myCoffeeBeans");
-  beansData = saved ? JSON.parse(saved) : [];
+  // Firebase에서 데이터 실시간으로 감시
+  beansRef.on("value", (snapshot) => {
+    const dataObj = snapshot.val() || {};
+    // dataObj는 { "someId": {...}, "anotherId": {...} }
+    beansData = Object.keys(dataObj).map((key) => dataObj[key]);
+
+    // 로컬 백업용으로도 저장(옵션): 혹시 오프라인 참고
+    localStorage.setItem("myCoffeeBeans_backup", JSON.stringify(beansData));
+
+    // 현재 보이는 페이지가 리스트라면 갱신
+    applyFilter();
+  });
+
   resetFormState();
-  showWritePage(); // 앱 처음 열면 "기록하기" 탭
+  showWritePage();
 }
 
 /****************************
@@ -177,16 +202,19 @@ beanImageInput.addEventListener("change", async () => {
 });
 
 /****************************
- * 새 노트 저장
+ * Firebase에 새 노트 저장
  ****************************/
 saveButton.addEventListener("click", () => {
+  const newId = Date.now().toString();
+
   const newBean = {
-    id: Date.now(),
+    id: Number(newId),
     name: beanNameInput.value.trim(),
     brand: beanBrandInput.value.trim(),
     roast: roastLevelInput.value,
     acidity: acidityInput.value,
     body: bodyInput.value,
+    rating: ratingInput.value,
     flavorNotes: flavorNotesInput.value.trim(),
     myNotes: myNotesInput.value.trim(),
     imageData: currentImageData || "",
@@ -198,11 +226,21 @@ saveButton.addEventListener("click", () => {
     return;
   }
 
-  beansData.push(newBean);
-  localStorage.setItem("myCoffeeBeans", JSON.stringify(beansData));
+  if (newBean.rating && (Number(newBean.rating) < 1 || Number(newBean.rating) > 10)) {
+    alert("평점은 1~10 사이여야 해요.");
+    return;
+  }
 
-  resetFormState();
-  alert("저장 완료! ✅");
+  // Firebase에 저장 (id를 key로 사용)
+  beansRef.child(newId).set(newBean)
+    .then(() => {
+      resetFormState();
+      alert("저장 완료! ✅");
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("저장 중 문제가 발생했어요.");
+    });
 });
 
 /****************************
@@ -222,6 +260,7 @@ function startEdit(idNumber) {
   roastLevelInput.value = target.roast || "";
   acidityInput.value = target.acidity || "";
   bodyInput.value = target.body || "";
+  ratingInput.value = target.rating || "";
   flavorNotesInput.value = target.flavorNotes || "";
   myNotesInput.value = target.myNotes || "";
 
@@ -234,18 +273,17 @@ function startEdit(idNumber) {
     imagePreviewEl.style.display = "none";
   }
 
-  // 파일 input은 보안상 직접 값 못 넣으므로 비워둠
   beanImageInput.value = "";
 
   saveButton.style.display = "none";
   updateButton.style.display = "block";
 
-  // 수정은 기록하기 탭에서만 하니까 자동으로 탭 전환
+  // 수정은 기록하기 탭에서 하므로 자동 전환
   showWritePage();
 }
 
 /****************************
- * 수정 완료
+ * 수정 완료 (Firebase 업데이트)
  ****************************/
 updateButton.addEventListener("click", () => {
   if (!editTargetId) {
@@ -253,48 +291,67 @@ updateButton.addEventListener("click", () => {
     return;
   }
 
-  beansData = beansData.map((bean) => {
-    if (bean.id === editTargetId) {
-      return {
-        ...bean,
-        name: beanNameInput.value.trim(),
-        brand: beanBrandInput.value.trim(),
-        roast: roastLevelInput.value,
-        acidity: acidityInput.value,
-        body: bodyInput.value,
-        flavorNotes: flavorNotesInput.value.trim(),
-        myNotes: myNotesInput.value.trim(),
-        imageData: currentImageData // 새 이미지 또는 기존 이미지
-        // timestamp는 최초 기록 시간 유지
-      };
-    }
-    return bean;
-  });
+  const editedRating = ratingInput.value;
+  if (editedRating && (Number(editedRating) < 1 || Number(editedRating) > 10)) {
+    alert("평점은 1~10 사이여야 해요.");
+    return;
+  }
 
-  localStorage.setItem("myCoffeeBeans", JSON.stringify(beansData));
+  // 수정 대상 bean의 id를 문자열 키로 쓸 것
+  const key = editTargetId.toString();
 
-  resetFormState();
-  alert("수정 완료! ✏️");
-  // 여기서 showListPage()를 자동으로 호출해서 결과 확인하게 할 수도 있음.
+  const updatedBean = {
+    id: editTargetId,
+    name: beanNameInput.value.trim(),
+    brand: beanBrandInput.value.trim(),
+    roast: roastLevelInput.value,
+    acidity: acidityInput.value,
+    body: bodyInput.value,
+    rating: ratingInput.value,
+    flavorNotes: flavorNotesInput.value.trim(),
+    myNotes: myNotesInput.value.trim(),
+    imageData: currentImageData // 새 이미지 또는 기존 이미지 유지
+    // timestamp는 원래 기록 시간 유지해야 하므로 기존 것 유지해야 하는데,
+    // 여기서는 DB에서 가져와서 덮어쓰는 전략 필요 -> 먼저 원래 timestamp를 가져와서 넣자
+  };
+
+  // 기존 timestamp 유지하려면 beansData에서 찾아온 후 덮어준다
+  const oldBean = beansData.find(b => b.id === editTargetId);
+  if (oldBean && oldBean.timestamp) {
+    updatedBean.timestamp = oldBean.timestamp;
+  } else {
+    updatedBean.timestamp = new Date().toLocaleString();
+  }
+
+  beansRef.child(key).set(updatedBean)
+    .then(() => {
+      resetFormState();
+      alert("수정 완료! ✏️");
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("수정 중 문제가 발생했어요.");
+    });
 });
 
 /****************************
- * 삭제
+ * 삭제 (Firebase에서 제거)
  ****************************/
 function deleteBean(idNumber) {
   const ok = confirm("정말 삭제할까요?");
   if (!ok) return;
 
-  beansData = beansData.filter((bean) => bean.id !== idNumber);
-  localStorage.setItem("myCoffeeBeans", JSON.stringify(beansData));
-
-  // 삭제 후 리스트 갱신
-  applyFilter();
-
-  // 만약 지금 수정 중이던 걸 삭제했으면 폼 초기화
-  if (editTargetId === idNumber) {
-    resetFormState();
-  }
+  const key = idNumber.toString();
+  beansRef.child(key).remove()
+    .then(() => {
+      if (editTargetId === idNumber) {
+        resetFormState();
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("삭제 중 문제가 발생했어요.");
+    });
 }
 
 /****************************
@@ -307,6 +364,7 @@ function resetFormState() {
   roastLevelInput.value = "";
   acidityInput.value = "";
   bodyInput.value = "";
+  ratingInput.value = "";
   flavorNotesInput.value = "";
   myNotesInput.value = "";
 
@@ -325,7 +383,8 @@ function resetFormState() {
 function renderFilteredList(list) {
   filteredList.innerHTML = "";
 
-  const reversed = [...list].reverse(); // 최신 항목이 위
+  const reversed = [...list].sort((a, b) => a.id - b.id).reverse();
+  // sort해서 뒤집는 이유: 최신(큰 id)이 위로
 
   reversed.forEach((bean) => {
     const card = document.createElement("div");
@@ -342,6 +401,10 @@ function renderFilteredList(list) {
       ? `<div class="bean-brand">${escapeHTML(bean.brand)}</div>`
       : "";
 
+    const ratingBadge = bean.rating
+      ? `<div class="bean-rating-display">⭐ ${escapeHTML(bean.rating)}/10</div>`
+      : `<div class="bean-rating-display" style="opacity:.4;">⭐ -/10</div>`;
+
     card.innerHTML = `
       <div class="bean-header">
         <div>
@@ -351,8 +414,11 @@ function renderFilteredList(list) {
         </div>
 
         <div class="bean-actions">
-          <button class="edit-btn" data-id="${bean.id}">수정</button>
-          <button class="delete-btn" data-id="${bean.id}">삭제</button>
+          ${ratingBadge}
+          <div class="actions-row">
+            <button class="edit-btn" data-id="${bean.id}">수정</button>
+            <button class="delete-btn" data-id="${bean.id}">삭제</button>
+          </div>
         </div>
       </div>
 
@@ -369,25 +435,25 @@ function renderFilteredList(list) {
       </div>
 
       <div class="bean-details" style="font-size:.7rem; opacity:0.6; margin-top:8px;">
-        기록일시: ${bean.timestamp}
+        기록일시: ${bean.timestamp || ""}
       </div>
     `;
 
     filteredList.appendChild(card);
   });
 
-  // 각 카드 안의 수정/삭제 버튼에 이벤트 연결
-  document.querySelectorAll(".delete-btn").forEach((btn) => {
+  // 버튼 이벤트 연결
+  filteredList.querySelectorAll(".delete-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const idToDelete = btn.getAttribute("data-id");
-      deleteBean(Number(idToDelete));
+      const idToDelete = Number(btn.getAttribute("data-id"));
+      deleteBean(idToDelete);
     });
   });
 
-  document.querySelectorAll(".edit-btn").forEach((btn) => {
+  filteredList.querySelectorAll(".edit-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const idToEdit = btn.getAttribute("data-id");
-      startEdit(Number(idToEdit));
+      const idToEdit = Number(btn.getAttribute("data-id"));
+      startEdit(idToEdit);
     });
   });
 }
@@ -401,7 +467,7 @@ function applyFilter() {
   const bodyQuery = filterBodyInput.value.trim();
 
   const result = beansData.filter((bean) => {
-    // 브랜드 부분검색 (소문자로 비교)
+    // 브랜드 부분검색
     if (brandQuery) {
       const b = (bean.brand || "").toLowerCase();
       if (!b.includes(brandQuery)) return false;
@@ -414,7 +480,7 @@ function applyFilter() {
 
     // 바디 정확 매칭
     if (bodyQuery) {
-      if ((bean.body || "") !== bodyQuery) return false;
+      if ( (bean.body || "") !== bodyQuery ) return false;
     }
 
     return true;
@@ -434,10 +500,13 @@ clearFilterButton.addEventListener("click", () => {
 
 /****************************
  * 백업 / 복원 / 이메일 전송
+ * - 백업: beansData를 JSON으로 다운로드
+ * - 복원: JSON을 읽어 Firebase에 밀어넣기
+ * - 이메일: mailto 링크로 백업 JSON URL 본문에 추가
  ****************************/
 function exportBackup() {
   if (!beansData.length) {
-    alert("저장된 원두 기록이 없습니다.");
+    alert("백업할 데이터가 없습니다.");
     return;
   }
 
@@ -464,28 +533,47 @@ function importBackup(file) {
   reader.onload = function (e) {
     try {
       const importedData = JSON.parse(e.target.result);
-
       if (!Array.isArray(importedData)) {
         throw new Error("올바른 백업 파일이 아닙니다.");
       }
 
-      const overwrite = confirm("기존 데이터 위에 덮어쓸까요? (취소하면 병합)");
+      const overwrite = confirm("기존 Firebase 데이터를 전부 이 백업으로 덮어쓸까요? (취소하면 병합)");
       if (overwrite) {
-        // 완전 덮어쓰기
-        beansData = importedData;
+        // 전체를 새로 세팅: 현재 모든 beansRef 지우고 업로드
+        beansRef.set(null).then(() => {
+          const updates = {};
+          importedData.forEach(item => {
+            const key = (item.id || Date.now()).toString();
+            updates[key] = {
+              ...item,
+              id: Number(key)
+            };
+          });
+          beansRef.update(updates).then(() => {
+            alert("복원(덮어쓰기) 완료 ✅");
+          });
+        });
       } else {
-        // 병합 (id 기준으로 없는 것만 추가)
+        // 병합: 기존 id와 겹치지 않는 것만 추가
         const existingIds = new Set(beansData.map(b => b.id));
+        const updates = {};
         importedData.forEach(item => {
           if (!existingIds.has(item.id)) {
-            beansData.push(item);
+            const key = (item.id || Date.now()).toString();
+            updates[key] = {
+              ...item,
+              id: Number(key)
+            };
           }
         });
+        if (Object.keys(updates).length === 0) {
+          alert("추가할 새로운 항목이 없습니다.");
+        } else {
+          beansRef.update(updates).then(() => {
+            alert("복원(병합) 완료 ✅");
+          });
+        }
       }
-
-      localStorage.setItem("myCoffeeBeans", JSON.stringify(beansData));
-      alert("복원이 완료되었습니다 ✅");
-      applyFilter();
     } catch (err) {
       console.error(err);
       alert("복원 중 오류가 발생했습니다.");
@@ -506,8 +594,8 @@ importFileInput.addEventListener("change", (e) => {
 
 /**
  * 이메일로 백업 보내기:
- * - 브라우저에서 직접 메일 첨부 전송은 제한됨
- * - 대신 mailto로 메일 앱을 열고, 백업 데이터 링크를 본문에 넣어준다
+ * - mailto로 메일 앱을 열고 백업 데이터의 임시 URL을 본문에 넣는다.
+ *   (첨부 자동 전송은 브라우저만으로는 불가)
  */
 function emailBackup() {
   if (!beansData.length) {
@@ -515,23 +603,21 @@ function emailBackup() {
     return;
   }
 
-  const subject = encodeURIComponent("Terry’s 커피빈 노트 백업 데이터");
-  const bodyIntro = 
-    "첨부된 JSON 백업을 보관해 주세요 ☕\n" +
-    "이 링크는 현재 브라우저에서 임시로 열 수 있는 백업 데이터입니다.\n\n" +
-    "백업 날짜: " + new Date().toLocaleString() + "\n\n";
+  const subject = encodeURIComponent("Terry’s 커피빈 노트 백업 데이터 (Firebase 버전)");
+  const bodyIntro =
+    "이 메일은 커피 빈 노트 전체 백업입니다 ☕\n" +
+    "아래 링크는 이 브라우저에서 임시로 접근 가능한 JSON Blob URL입니다.\n\n" +
+    "백업 시각: " + new Date().toLocaleString() + "\n\n";
 
-  // JSON 문자열 만들고 Blob으로 URL 만들기
   const json = JSON.stringify(beansData, null, 2);
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
 
-  const bodyFull = encodeURIComponent(bodyIntro + "백업 파일(복사하여 저장): " + url);
+  const bodyFull = encodeURIComponent(bodyIntro + "백업 데이터 URL: " + url);
 
-  // 기본 메일 앱 열기
   window.location.href = `mailto:?subject=${subject}&body=${bodyFull}`;
 
-  alert("메일 앱이 열리지 않으면, 백업 내보내기를 먼저 눌러서 파일을 직접 첨부해 주세요.");
+  alert("메일 앱이 열리지 않으면, '백업 내보내기' 후 파일을 직접 첨부해 주세요.");
 }
 
 emailBackupButton.addEventListener("click", emailBackup);
@@ -539,8 +625,8 @@ emailBackupButton.addEventListener("click", emailBackup);
 /****************************
  * HTML 출력 시 문자 이스케이프 (XSS 방지)
  ****************************/
-function escapeHTML(str) {
-  return str
+function escapeHTML(str = "") {
+  return String(str)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");

@@ -1,4 +1,4 @@
-const CACHE_NAME = "coffee-notes-cache-v1";
+const CACHE_NAME = "coffee-notes-cache-v2";
 const FILES_TO_CACHE = [
   "./",
   "./index.html",
@@ -48,7 +48,8 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(
     caches.match(event.request).then((response) => {
-      // 캐시에 있으면 그걸 주고, 없으면 네트워크에서 가져오기
+      // 캐시에 있으면 캐시로 응답,
+      // 없으면 네트워크에서 받아오기
       return response || fetch(event.request);
     })
   );
